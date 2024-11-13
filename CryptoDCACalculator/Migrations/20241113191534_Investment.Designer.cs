@@ -4,6 +4,7 @@ using CryptoDCACalculator.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CryptoDCACalculator.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20241113191534_Investment")]
+    partial class Investment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,9 +72,12 @@ namespace CryptoDCACalculator.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("CryptoAmount")
-                        .HasColumnType("decimal(18,8)");
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("CryptocurrencyID")
+                    b.Property<Guid>("CryptoID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CryptocurrencyID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Timestamp")
@@ -97,9 +103,7 @@ namespace CryptoDCACalculator.Migrations
                 {
                     b.HasOne("CryptoDCACalculator.Entities.Cryptocurrency", null)
                         .WithMany("Investments")
-                        .HasForeignKey("CryptocurrencyID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CryptocurrencyID");
                 });
 
             modelBuilder.Entity("CryptoDCACalculator.Entities.Cryptocurrency", b =>

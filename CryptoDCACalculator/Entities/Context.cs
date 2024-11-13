@@ -4,8 +4,9 @@ namespace CryptoDCACalculator.Entities
 {
     public class Context: DbContext
     {
-        DbSet<Cryptocurrency> Cryptocurrencies { get; set; }
-        DbSet<CryptoPrice> CryptoPrices { get; set; }
+       public DbSet<Cryptocurrency> Cryptocurrencies { get; set; }
+        public DbSet<CryptoPrice> CryptoPrices { get; set; }
+        public DbSet<Investment> Investments { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

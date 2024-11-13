@@ -1,5 +1,9 @@
 ﻿@page "/cryptoOverview"
+@rendermode RenderMode.InteractiveServer
 @attribute [StreamRendering]
+
+@using CryptoDCACalculator.DTOs
+@using CryptoDCACalculator.Entities
 
 <PageTitle>Crypto Overview</PageTitle>
 
@@ -11,42 +15,115 @@
 {
     <p><em>Loading...</em></p>
 }
+else if (cryptocurrencies.Count == 0)
+{
+    <p>No cryptocurrencies available.</p>
+}
 else
 {
     <table class="table">
         <thead>
             <tr>
+                <th></th>
                 <th>Cryptocurrency</th>
-                <th>Price</th>
+                <th>Current Value</th>
                 <th>Timestamp</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var crypto in cryptocurrencies)
+            @foreach (var cryptocurrency in cryptocurrencies)
             {
-                @foreach (var price in crypto.CryptoPrices)
-                {
-                    <tr>
-                        <td>@crypto.Name</td>
-                        <td>@price.Price</td>
-                        <td>@price.Timestamp.ToString("g")</td>
-                    </tr>
-                }
+                <tr>
+                    <td><input type="checkbox" @onchange="(e) => CheckboxChanged(e,cryptocurrency)" /></td>
+                    <td>@cryptocurrency.Name</td>
+                    <td>@((cryptocurrency.LatestPrice != null ? cryptocurrency.LatestPrice : "-"))</td>
+                    <td>@(cryptocurrency.LatestPriceTimestamp != null ? cryptocurrency.LatestPriceTimestamp?.ToString("g") : "-")</td>
+                </tr>
+
             }
         </tbody>
     </table>
+
+    <hr class="mt-5 mb-5" />
+
+    @if (investedCryptocurrencies == null)
+    {
+        <p><em>Please select a crypto</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Crypto</th>
+                    <th>Date</th>
+                    <th>Invested amount</th>
+                    <th>Coin Amount</th>
+                    <th>Value Today</th>
+                    <th>ROI</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var crypto in investedCryptocurrencies)
+                {
+                    @foreach (var investment in crypto.CryptoInvestment)
+                    {
+                        <tr>
+                            <td>@crypto.CryptoName</td>
+                            <td>@investment.Timestamp</td>
+                            <td>@investment.Amount</td>
+                            <td>@investment.CryptoAmount</td>
+                            <td>@crypto.CryptoCurrentValue</td>
+                            <td>@crypto.ROI</td>
+                        </tr>
+                    }
+
+                }
+            </tbody>
+        </table>
+    }
 }
 
 @code {
-    private List<Cryptocurrency>? cryptocurrencies;
+    private List<CryptocurrencyDTO> cryptocurrencies;
+
+
+    private List<CryptocurrencyInvestmentDTO> investedCryptocurrencies;
 
     [Inject]
-    private Context DbContext { get; set; }
+    private HttpClient Http { get; set; }
+
+    private string errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        cryptocurrencies = await DbContext.Cryptocurrencies
-            .Include(c => c.CryptoPrices)
-            .ToListAsync();
+        try
+        {
+            cryptocurrencies = await Http.GetFromJsonAsync<List<CryptocurrencyDTO>>("http://localhost:5107/api/Cryptocurrency");
+
+            if (cryptocurrencies == null || cryptocurrencies.Count == 0)
+            {
+                errorMessage = "No cryptocurrencies found or API returned no data.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while fetching data: {ex.Message}";
+        }
+    }
+
+    public async void CheckboxChanged(ChangeEventArgs ev, CryptocurrencyDTO crypto)
+    {
+        var cryptoSelected = (bool)ev.Value;
+
+        if (cryptoSelected)
+        {
+            investedCryptocurrencies = await Http.GetFromJsonAsync<List<CryptocurrencyInvestmentDTO>>("http://localhost:5107/api/Cryptocurrency/InvestInfo/" + crypto.ID.ToString());
+            StateHasChanged();
+        }
+        else
+        {
+            investedCryptocurrencies.RemoveAll(c => c.CryptoID == crypto.ID);
+        }
     }
 }
