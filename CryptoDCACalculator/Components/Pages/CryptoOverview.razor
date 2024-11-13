@@ -1,0 +1,52 @@
+﻿@page "/cryptoOverview"
+@attribute [StreamRendering]
+
+<PageTitle>Crypto Overview</PageTitle>
+
+<h1>Crypto Overview</h1>
+
+<p>This component demonstrates displaying cryptocurrency data.</p>
+
+@if (cryptocurrencies == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Cryptocurrency</th>
+                <th>Price</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var crypto in cryptocurrencies)
+            {
+                @foreach (var price in crypto.CryptoPrices)
+                {
+                    <tr>
+                        <td>@crypto.Name</td>
+                        <td>@price.Price</td>
+                        <td>@price.Timestamp.ToString("g")</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Cryptocurrency>? cryptocurrencies;
+
+    [Inject]
+    private Context DbContext { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        cryptocurrencies = await DbContext.Cryptocurrencies
+            .Include(c => c.CryptoPrices)
+            .ToListAsync();
+    }
+}
