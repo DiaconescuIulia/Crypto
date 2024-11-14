@@ -1,4 +1,4 @@
-﻿@page "/cryptoOverview"
+﻿@page "/portofolio"
 @rendermode RenderMode.InteractiveServer
 @attribute [StreamRendering]
 
@@ -7,9 +7,9 @@
 @using MudBlazor
 @using System.Text.Json
 
-<PageTitle>Crypto Overview</PageTitle>
+<PageTitle>Portofolio</PageTitle>
 
-<h1>Crypto Overview</h1>
+<h1>Portofolio</h1>
 
 <p>This component demonstrates displaying cryptocurrency data.</p>
 
@@ -28,7 +28,7 @@ else
             <tr>
                 <th></th>
                 <th>Cryptocurrency</th>
-                <th>Current Value</th>
+                <th>Value Today</th>
                 <th>Timestamp</th>
             </tr>
         </thead>
@@ -85,7 +85,7 @@ else
                                 <td>@investment.Amount</td>
                                 <td>@investment.CryptoAmount</td>
                                 <td>@crypto.CryptoCurrentValue</td>
-                                <td>@crypto.ROI</td>
+                                <td>@investment.ROI</td>
                             </tr>
                         }
 
@@ -103,7 +103,7 @@ else
 
     private List<CryptocurrencyInvestmentDTO> investedCryptocurrencies;
 
-    string errormessage = "test";
+    string errormessage = "error";
 
     private List<CryptocurrencyInvestmentDTO> filteredInvestedCryptocurrencies;
 
@@ -113,7 +113,7 @@ else
     private string errorMessage;
 
 
-    DateTime? _StartDate = DateTime.Now;
+    DateTime? _StartDate = DateTime.Parse("01/01/2024");
 
     private DateTime? StartDate
     {
@@ -179,7 +179,9 @@ else
 
         filteredInvestedCryptocurrencies.ForEach(ic =>
         {
-            ic.CryptoInvestment = ic.CryptoInvestment.Where(i => i.Timestamp >= StartDate);
+            ic.CryptoInvestment = ic.CryptoInvestment
+                .Where(i => i.Timestamp >= StartDate)
+                .OrderByDescending(i => i.Timestamp);
         });
         filteredInvestedCryptocurrencies = filteredInvestedCryptocurrencies.Where(ic => ic.CryptoInvestment.Any(i => i.Timestamp >= StartDate)).ToList();
 

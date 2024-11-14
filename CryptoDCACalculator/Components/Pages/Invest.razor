@@ -1,0 +1,115 @@
+﻿@page "/invest"
+@rendermode InteractiveServer
+@attribute [StreamRendering]
+
+@using CryptoDCACalculator.DTOs
+@using CryptoDCACalculator.Entities
+@using MudBlazor
+
+<PageTitle>Invest</PageTitle>
+
+<h1>Invest</h1>
+@if (cryptocurrencies == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (cryptocurrencies.Count == 0)
+{
+    <p>No cryptocurrencies available.</p>
+}
+else
+{
+    <MudItem xs="12" sm="6" md="4">
+    <MudDatePicker PickerVariant="PickerVariant.Dialog" Label="Start date" @bind-Date="@InvestDate" DateFormat="dd/MM/yyyy" />
+    </MudItem>
+
+    <table class="table">
+        <thead>
+            <tr>             
+                <th>Name</th>
+                <th>Value Today</th>
+                <th>Invest Amount</th>
+                <th>Frequency</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cryptocurrency in cryptocurrencies)
+            {
+                <tr>
+                    <td>@cryptocurrency.Name</td>
+                    <td>@((cryptocurrency.LatestPrice != null ? cryptocurrency.LatestPrice : "-"))</td>
+                    <td><MudInput T="decimal?" @bind-Value="investRequests.First(r => r.CryptocurrencyID == cryptocurrency.ID).InvestedAmount" Label="Amount"></MudInput></td>
+                    <td>
+                        <MudSelect T="int?" @bind-Value="investRequests.First(r => r.CryptocurrencyID == cryptocurrency.ID).Frequency" Label="Frequency">
+                            <MudSelectItem T="int?" Value="1">Weekly</MudSelectItem>
+                            <MudSelectItem T="int?" Value="2">Bi-weekly</MudSelectItem>
+                            <MudSelectItem T="int?" Value="3">Monthly</MudSelectItem>
+                        </MudSelect>
+                    </td>
+
+                </tr>
+
+            }
+        </tbody>
+    </table>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InvestCrypto">Invest</MudButton>
+}
+
+@code {
+    private List<CryptocurrencyDTO> cryptocurrencies;
+    private List<InvestRequestDTO> investRequests;
+    private string errorMessage;
+
+    [Inject]
+    private HttpClient Http { get; set; }
+
+    public string InvestAmount { get; set; }
+
+    DateTime? _InvestDate = DateTime.Now;
+
+    private DateTime? InvestDate
+    {
+        get => _InvestDate;
+        set
+        {
+            _InvestDate = value;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            cryptocurrencies = await Http.GetFromJsonAsync<List<CryptocurrencyDTO>>("http://localhost:5107/api/Cryptocurrency");
+
+            if (cryptocurrencies == null || cryptocurrencies.Count == 0)
+            {
+                errorMessage = "No cryptocurrencies found or API returned no data.";
+            }
+            investRequests = new List<InvestRequestDTO>();
+            cryptocurrencies.ForEach(c =>
+            {
+                investRequests.Add(new InvestRequestDTO
+                {
+                    CryptocurrencyID = c.ID,
+                    InvestedAmount = null
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while fetching data: {ex.Message}";
+        }
+    }
+
+    private async Task InvestCrypto()
+    {
+        var requests = this.investRequests.Where(i => i.InvestedAmount > 0).ToList();
+        requests.ForEach(r => {
+            r.StartDate = InvestDate;
+        });
+
+        var response = await Http.PostAsJsonAsync("http://localhost:5107/api/Cryptocurrency/Invest", requests);
+    }
+}

@@ -44,35 +44,6 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                 .FirstOrDefaultAsync(c => c.ID == id);
         }
 
-        //public async Task<CryptocurrencyInvestmentDTO?> GetCryptocurrencyInvestmentsByIdAsync(Guid id)
-        //{
-        //    var investmentRawData = await _context.Cryptocurrencies
-        //        .Include(c => c.CryptoPrices)
-        //        .Include(c => c.Investments)
-        //        .FirstOrDefaultAsync(c => c.ID == id);
-
-        //    var totalCrypto = investmentRawData.Investments.Sum(i => i.CryptoAmount);
-        //    var actualCryptoValue = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp).Price;
-        //    var totalInvestment = investmentRawData.Investments.Sum(i => i.Amount);
-        //    var profit = totalCrypto * actualCryptoValue - totalInvestment;
-
-        //    var ROI = (profit / totalInvestment) * 100;
-
-        //    CryptocurrencyInvestmentDTO cryptocurrencyInvestmentDTO = new CryptocurrencyInvestmentDTO 
-        //    { 
-        //        CryptoID = investmentRawData.ID, 
-        //        CryptoName = investmentRawData.Name, 
-        //        ROI = ROI,
-        //        CryptoInvestment = investmentRawData.Investments,
-        //        CryptoPrices = investmentRawData.CryptoPrices
-        //    };
-
-
-
-        //    return cryptocurrencyInvestmentDTO;
-
-        //}
-
         public async Task<List<CryptocurrencyInvestmentDTO>> GetCryptocurrencyInvestmentsByIdsAsync(List<Guid> ids)
         {
           
@@ -102,17 +73,52 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                     CryptoID = investmentRawData.ID,
                     CryptoName = investmentRawData.Name,
                     ROI = ROI,
-                    CryptoInvestment = investmentRawData.Investments,
+                    CryptoInvestment = investmentRawData.Investments.Select(i => {
+                        var profit = i.CryptoAmount * actualCryptoValue - i.Amount;
+                        var ROI = (profit / i.Amount) * 100;
+                        return new InvestmentDTO
+                        {
+                            Amount = i.Amount,
+                            CryptoAmount = i.CryptoAmount,
+                            Timestamp = i.Timestamp,
+                            ROI = ROI
+                        };
+                    }),
                     CryptoPrices = investmentRawData.CryptoPrices
                 };
 
-                var todaysPrice = investmentRawData.CryptoPrices.FirstOrDefault(cp => cp.Timestamp.Date == DateTime.Today);
-                cryptocurrencyInvestmentDTO.CryptoCurrentValue = todaysPrice?.Price ?? 0;
+                var latestPrice = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp)?.Price ?? 0;
+                cryptocurrencyInvestmentDTO.CryptoCurrentValue = latestPrice;
 
                 cryptocurrencyInvestments.Add(cryptocurrencyInvestmentDTO);
             }
 
             return cryptocurrencyInvestments;
+        }
+
+        public async Task Invest(List<InvestRequestDTO> investsRequest)
+        {
+            var cryptoPrices = await _context.CryptoPrices
+                .Where(p => investsRequest.Select(r => r.CryptocurrencyID).Contains(p.CryptocurrencyID))
+                .ToListAsync();
+
+            var investmentEntities = investsRequest.Select(i =>
+            {
+                var currentCryptoPrice = cryptoPrices
+                    .Where(p => p.CryptocurrencyID == i.CryptocurrencyID)
+                    .MaxBy(p => p.Timestamp);
+                return new Investment
+                {
+                    ID = Guid.NewGuid(),
+                    CryptocurrencyID = i.CryptocurrencyID,
+                    Amount = (decimal)i.InvestedAmount,
+                    CryptoAmount = (decimal)(i.InvestedAmount / currentCryptoPrice.Price),
+                    Timestamp = DateTime.UtcNow,
+                };
+            });
+            
+            _context.Investments.AddRange(investmentEntities);
+            await _context.SaveChangesAsync();
         }
     }
 }

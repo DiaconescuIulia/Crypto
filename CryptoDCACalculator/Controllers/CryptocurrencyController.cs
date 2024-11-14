@@ -34,19 +34,6 @@ namespace CryptoDCACalculator.Controllers
             return Ok(cryptocurrency);
         }
 
-        //[HttpGet("InvestInfo/{id}")]
-        //public async Task<ActionResult<List<CryptocurrencyInvestmentDTO>>> GetCryptocurrencyInvestitionInfo(Guid id)
-        //{
-        //    List<CryptocurrencyInvestmentDTO> cryptocurrencyInvestments = new List<CryptocurrencyInvestmentDTO>();
-        //    var investmentInfo = await _cryptoService.GetCryptocurrencyInvestmentsByIdAsync(id);
-        //    if (investmentInfo == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    cryptocurrencyInvestments.Add(investmentInfo);
-        //    return Ok(cryptocurrencyInvestments);
-        //}
-
         [HttpGet("InvestInfo")]
         public async Task<ActionResult<List<CryptocurrencyInvestmentDTO>>> GetCryptocurrencyInvestitionInfo([FromQuery] List<Guid>? ids)
         {
@@ -64,6 +51,13 @@ namespace CryptoDCACalculator.Controllers
             }
 
             return Ok(cryptocurrencyInvestments);
+        }
+
+        [HttpPost("Invest")]
+        public async Task<IActionResult> Invest([FromBody]List<InvestRequestDTO> investsRequest)
+        {
+            await _cryptoService.Invest(investsRequest);
+            return Ok();
         }
 
     }
