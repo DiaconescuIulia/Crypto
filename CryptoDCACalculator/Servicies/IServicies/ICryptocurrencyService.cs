@@ -7,6 +7,6 @@ namespace CryptoDCACalculator.Servicies.IServicies
     {
         Task<List<CryptocurrencyDTO>> GetAllCryptocurrenciesAsync();
         Task<Cryptocurrency?> GetCryptocurrencyByIdAsync(Guid id);
-        Task<CryptocurrencyInvestmentDTO?> GetCryptocurrencyInvestmentsByIdAsync(Guid id);
+        Task<List<CryptocurrencyInvestmentDTO?>> GetCryptocurrencyInvestmentsByIdsAsync(List<Guid> ids);
     }
 }

@@ -4,6 +4,8 @@
 
 @using CryptoDCACalculator.DTOs
 @using CryptoDCACalculator.Entities
+@using MudBlazor
+@using System.Text.Json
 
 <PageTitle>Crypto Overview</PageTitle>
 
@@ -52,36 +54,47 @@ else
     }
     else
     {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Crypto</th>
-                    <th>Date</th>
-                    <th>Invested amount</th>
-                    <th>Coin Amount</th>
-                    <th>Value Today</th>
-                    <th>ROI</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var crypto in investedCryptocurrencies)
-                {
-                    @foreach (var investment in crypto.CryptoInvestment)
+        <MudItem xs="12" sm="6" md="4">
+            <MudDatePicker PickerVariant="PickerVariant.Dialog" Label="Start date" @bind-Date="@StartDate" HelperText="date picker" DateFormat="dd/MM/yyyy" />
+        </MudItem>
+        @if (filteredInvestedCryptocurrencies == null || !filteredInvestedCryptocurrencies.Any())
+        {
+            <p><em>No investments found for the selected date</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Crypto</th>
+                        <th>Date</th>
+                        <th>Invested amount</th>
+                        <th>Coin Amount</th>
+                        <th>Value Today</th>
+                        <th>ROI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var crypto in filteredInvestedCryptocurrencies)
                     {
-                        <tr>
-                            <td>@crypto.CryptoName</td>
-                            <td>@investment.Timestamp</td>
-                            <td>@investment.Amount</td>
-                            <td>@investment.CryptoAmount</td>
-                            <td>@crypto.CryptoCurrentValue</td>
-                            <td>@crypto.ROI</td>
-                        </tr>
-                    }
+                        @foreach (var investment in crypto.CryptoInvestment)
+                        {
+                            <tr>
+                                <td>@crypto.CryptoName</td>
+                                <td>@investment.Timestamp</td>
+                                <td>@investment.Amount</td>
+                                <td>@investment.CryptoAmount</td>
+                                <td>@crypto.CryptoCurrentValue</td>
+                                <td>@crypto.ROI</td>
+                            </tr>
+                        }
 
-                }
-            </tbody>
-        </table>
+                    }
+                </tbody>
+            </table>
+        }
     }
+
 }
 
 @code {
@@ -90,10 +103,28 @@ else
 
     private List<CryptocurrencyInvestmentDTO> investedCryptocurrencies;
 
+    string errormessage = "test";
+
+    private List<CryptocurrencyInvestmentDTO> filteredInvestedCryptocurrencies;
+
     [Inject]
     private HttpClient Http { get; set; }
 
     private string errorMessage;
+
+
+    DateTime? _StartDate = DateTime.Now;
+
+    private DateTime? StartDate
+    {
+        get => _StartDate;
+        set
+        {
+            _StartDate = value;
+            OnDateChange();
+        }
+    }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -112,18 +143,47 @@ else
         }
     }
 
+    public List<Guid> selectedCryptos = new List<Guid>();
+
     public async void CheckboxChanged(ChangeEventArgs ev, CryptocurrencyDTO crypto)
     {
         var cryptoSelected = (bool)ev.Value;
 
         if (cryptoSelected)
         {
-            investedCryptocurrencies = await Http.GetFromJsonAsync<List<CryptocurrencyInvestmentDTO>>("http://localhost:5107/api/Cryptocurrency/InvestInfo/" + crypto.ID.ToString());
-            StateHasChanged();
+            selectedCryptos.Add(crypto.ID);
+
+            investedCryptocurrencies = selectedCryptos.Any()
+          ? await Http.GetFromJsonAsync<List<CryptocurrencyInvestmentDTO>>(
+                "http://localhost:5107/api/Cryptocurrency/InvestInfo?" +
+                string.Join("&", selectedCryptos.Select(id => "ids=" + id.ToString())))
+          : new List<CryptocurrencyInvestmentDTO>();
         }
         else
         {
+            selectedCryptos.Remove(crypto.ID);
             investedCryptocurrencies.RemoveAll(c => c.CryptoID == crypto.ID);
         }
+
+        ApplyFilter();
+    }
+
+    public async void OnDateChange()
+    {
+        ApplyFilter();
+    }
+
+    public void ApplyFilter()
+    {
+        filteredInvestedCryptocurrencies = JsonSerializer.Deserialize<List<CryptocurrencyInvestmentDTO>>(JsonSerializer.Serialize(investedCryptocurrencies)); //clone original data
+
+        filteredInvestedCryptocurrencies.ForEach(ic =>
+        {
+            ic.CryptoInvestment = ic.CryptoInvestment.Where(i => i.Timestamp >= StartDate);
+        });
+        filteredInvestedCryptocurrencies = filteredInvestedCryptocurrencies.Where(ic => ic.CryptoInvestment.Any(i => i.Timestamp >= StartDate)).ToList();
+
+
+        StateHasChanged();
     }
 }

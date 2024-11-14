@@ -34,17 +34,37 @@ namespace CryptoDCACalculator.Controllers
             return Ok(cryptocurrency);
         }
 
-        [HttpGet("InvestInfo/{id}")]
-        public async Task<ActionResult<List<CryptocurrencyInvestmentDTO>>> GetCryptocurrencyInvestitionInfo(Guid id)
+        //[HttpGet("InvestInfo/{id}")]
+        //public async Task<ActionResult<List<CryptocurrencyInvestmentDTO>>> GetCryptocurrencyInvestitionInfo(Guid id)
+        //{
+        //    List<CryptocurrencyInvestmentDTO> cryptocurrencyInvestments = new List<CryptocurrencyInvestmentDTO>();
+        //    var investmentInfo = await _cryptoService.GetCryptocurrencyInvestmentsByIdAsync(id);
+        //    if (investmentInfo == null)
+        //    {
+        //        return NotFound();
+        //    }
+        //    cryptocurrencyInvestments.Add(investmentInfo);
+        //    return Ok(cryptocurrencyInvestments);
+        //}
+
+        [HttpGet("InvestInfo")]
+        public async Task<ActionResult<List<CryptocurrencyInvestmentDTO>>> GetCryptocurrencyInvestitionInfo([FromQuery] List<Guid>? ids)
         {
-            List<CryptocurrencyInvestmentDTO> cryptocurrencyInvestments = new List<CryptocurrencyInvestmentDTO>();
-            var investmentInfo = await _cryptoService.GetCryptocurrencyInvestmentsByIdAsync(id);
-            if (investmentInfo == null)
+            
+            if (!ids.Any())
             {
-                return NotFound();
+                return BadRequest("Please provide at least one valid ID.");
             }
-            cryptocurrencyInvestments.Add(investmentInfo);
+
+            var cryptocurrencyInvestments = await _cryptoService.GetCryptocurrencyInvestmentsByIdsAsync(ids);
+
+            if (cryptocurrencyInvestments == null || !cryptocurrencyInvestments.Any())
+            {
+                return NotFound("No investments found for the provided IDs.");
+            }
+
             return Ok(cryptocurrencyInvestments);
         }
+
     }
 }

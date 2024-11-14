@@ -44,33 +44,75 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                 .FirstOrDefaultAsync(c => c.ID == id);
         }
 
-        public async Task<CryptocurrencyInvestmentDTO?> GetCryptocurrencyInvestmentsByIdAsync(Guid id)
+        //public async Task<CryptocurrencyInvestmentDTO?> GetCryptocurrencyInvestmentsByIdAsync(Guid id)
+        //{
+        //    var investmentRawData = await _context.Cryptocurrencies
+        //        .Include(c => c.CryptoPrices)
+        //        .Include(c => c.Investments)
+        //        .FirstOrDefaultAsync(c => c.ID == id);
+
+        //    var totalCrypto = investmentRawData.Investments.Sum(i => i.CryptoAmount);
+        //    var actualCryptoValue = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp).Price;
+        //    var totalInvestment = investmentRawData.Investments.Sum(i => i.Amount);
+        //    var profit = totalCrypto * actualCryptoValue - totalInvestment;
+
+        //    var ROI = (profit / totalInvestment) * 100;
+
+        //    CryptocurrencyInvestmentDTO cryptocurrencyInvestmentDTO = new CryptocurrencyInvestmentDTO 
+        //    { 
+        //        CryptoID = investmentRawData.ID, 
+        //        CryptoName = investmentRawData.Name, 
+        //        ROI = ROI,
+        //        CryptoInvestment = investmentRawData.Investments,
+        //        CryptoPrices = investmentRawData.CryptoPrices
+        //    };
+
+
+
+        //    return cryptocurrencyInvestmentDTO;
+
+        //}
+
+        public async Task<List<CryptocurrencyInvestmentDTO>> GetCryptocurrencyInvestmentsByIdsAsync(List<Guid> ids)
         {
-            var investmentRawData = await _context.Cryptocurrencies
+          
+            var investmentsRawData = await _context.Cryptocurrencies
                 .Include(c => c.CryptoPrices)
                 .Include(c => c.Investments)
-                .FirstOrDefaultAsync(c => c.ID == id);
+                .Where(c => ids.Contains(c.ID))
+                .ToListAsync();
+            
+            var cryptocurrencyInvestments = new List<CryptocurrencyInvestmentDTO>();
+            
+            foreach (var investmentRawData in investmentsRawData)
+            {
+                if (investmentRawData == null || !investmentRawData.Investments.Any())
+                {
+                    continue; 
+                }
 
-            var totalCrypto = investmentRawData.Investments.Sum(i => i.CryptoAmount);
-            var actualCryptoValue = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp).Price;
-            var totalInvestment = investmentRawData.Investments.Sum(i => i.Amount);
-            var profit = totalCrypto * actualCryptoValue - totalInvestment;
+                var totalCrypto = investmentRawData.Investments.Sum(i => i.CryptoAmount);
+                var actualCryptoValue = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp)?.Price ?? 0;
+                var totalInvestment = investmentRawData.Investments.Sum(i => i.Amount);
+                var profit = totalCrypto * actualCryptoValue - totalInvestment;
+                var ROI = totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0;
+                
+                var cryptocurrencyInvestmentDTO = new CryptocurrencyInvestmentDTO
+                {
+                    CryptoID = investmentRawData.ID,
+                    CryptoName = investmentRawData.Name,
+                    ROI = ROI,
+                    CryptoInvestment = investmentRawData.Investments,
+                    CryptoPrices = investmentRawData.CryptoPrices
+                };
 
-            var ROI = (profit / totalInvestment) * 100;
+                var todaysPrice = investmentRawData.CryptoPrices.FirstOrDefault(cp => cp.Timestamp.Date == DateTime.Today);
+                cryptocurrencyInvestmentDTO.CryptoCurrentValue = todaysPrice?.Price ?? 0;
 
-            CryptocurrencyInvestmentDTO cryptocurrencyInvestmentDTO = new CryptocurrencyInvestmentDTO 
-            { 
-                CryptoID = investmentRawData.ID, 
-                CryptoName = investmentRawData.Name, 
-                ROI = ROI,
-                CryptoInvestment = investmentRawData.Investments,
-                CryptoPrices = investmentRawData.CryptoPrices
-            };
+                cryptocurrencyInvestments.Add(cryptocurrencyInvestmentDTO);
+            }
 
-
-
-            return cryptocurrencyInvestmentDTO;
-
+            return cryptocurrencyInvestments;
         }
     }
 }

@@ -3,8 +3,11 @@ using CryptoDCACalculator.Entities;
 using CryptoDCACalculator.Servicies.IServicies;
 using CryptoDCACalculator.Servicies.ServiciesImpl;
 using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddMudServices();
 
 builder.Services.AddHttpClient();
 
@@ -12,6 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddControllers();
+
 
 builder.Services.AddScoped<ICryptocurrencyService, CryptocurrencyService>();
 
