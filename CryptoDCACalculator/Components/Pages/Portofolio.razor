@@ -48,7 +48,7 @@ else
 
     <hr class="mt-5 mb-5" />
 
-    @if (investedCryptocurrencies == null)
+    @if (!selectedCryptos.Any())
     {
         <p><em>Please select a crypto</em></p>
     }
@@ -103,6 +103,8 @@ else
 
     private List<CryptocurrencyInvestmentDTO> investedCryptocurrencies;
 
+    public List<Guid> selectedCryptos = new List<Guid>();
+
     string errormessage = "error";
 
     private List<CryptocurrencyInvestmentDTO> filteredInvestedCryptocurrencies;
@@ -142,8 +144,6 @@ else
             errorMessage = $"An error occurred while fetching data: {ex.Message}";
         }
     }
-
-    public List<Guid> selectedCryptos = new List<Guid>();
 
     public async void CheckboxChanged(ChangeEventArgs ev, CryptocurrencyDTO crypto)
     {

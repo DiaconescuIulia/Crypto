@@ -66,7 +66,7 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                 var actualCryptoValue = investmentRawData.CryptoPrices.MaxBy(cp => cp.Timestamp)?.Price ?? 0;
                 var totalInvestment = investmentRawData.Investments.Sum(i => i.Amount);
                 var profit = totalCrypto * actualCryptoValue - totalInvestment;
-                var ROI = totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0;
+                var ROI = totalInvestment > 0 ? (profit / totalInvestment) : 0;
                 
                 var cryptocurrencyInvestmentDTO = new CryptocurrencyInvestmentDTO
                 {
@@ -75,7 +75,7 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                     ROI = ROI,
                     CryptoInvestment = investmentRawData.Investments.Select(i => {
                         var profit = i.CryptoAmount * actualCryptoValue - i.Amount;
-                        var ROI = (profit / i.Amount) * 100;
+                        var ROI = (profit / i.Amount);
                         return new InvestmentDTO
                         {
                             Amount = i.Amount,
@@ -102,21 +102,35 @@ namespace CryptoDCACalculator.Servicies.ServiciesImpl
                 .Where(p => investsRequest.Select(r => r.CryptocurrencyID).Contains(p.CryptocurrencyID))
                 .ToListAsync();
 
-            var investmentEntities = investsRequest.Select(i =>
+            var investmentEntities = new List<Investment>();
+
+            investsRequest.ForEach(i =>
             {
-                var currentCryptoPrice = cryptoPrices
-                    .Where(p => p.CryptocurrencyID == i.CryptocurrencyID)
-                    .MaxBy(p => p.Timestamp);
-                return new Investment
+                var investDate = i.StartDate.Value;
+                var today = DateTime.UtcNow;
+                while (investDate <= today)
                 {
-                    ID = Guid.NewGuid(),
-                    CryptocurrencyID = i.CryptocurrencyID,
-                    Amount = (decimal)i.InvestedAmount,
-                    CryptoAmount = (decimal)(i.InvestedAmount / currentCryptoPrice.Price),
-                    Timestamp = DateTime.UtcNow,
-                };
+                    var currentCryptoPrice = cryptoPrices
+                   .Where(p => p.CryptocurrencyID == i.CryptocurrencyID)
+                   .OrderBy(p => p.Timestamp)
+                   .First(p => p.Timestamp >= investDate);
+
+                    var investmentEntity = new Investment
+                    {
+                        ID = Guid.NewGuid(),
+                        CryptocurrencyID = i.CryptocurrencyID,
+                        Amount = (decimal)i.InvestedAmount,
+                        CryptoAmount = (decimal)(i.InvestedAmount / currentCryptoPrice.Price),
+                        Timestamp = investDate,
+                    };
+
+                    investmentEntities.Add(investmentEntity);
+
+                    investDate = investDate.AddMonths(1);
+                }
+
             });
-            
+
             _context.Investments.AddRange(investmentEntities);
             await _context.SaveChangesAsync();
         }

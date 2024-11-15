@@ -45,11 +45,6 @@ namespace CryptoDCACalculator.Controllers
 
             var cryptocurrencyInvestments = await _cryptoService.GetCryptocurrencyInvestmentsByIdsAsync(ids);
 
-            if (cryptocurrencyInvestments == null || !cryptocurrencyInvestments.Any())
-            {
-                return NotFound("No investments found for the provided IDs.");
-            }
-
             return Ok(cryptocurrencyInvestments);
         }
 
